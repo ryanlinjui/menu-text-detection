@@ -1,0 +1,18 @@
+# poetry
+.venv
+poetry.lock
+
+# mac
+.DS_Store
+
+# cache
+__pycache__
+
+# temp file
+tmp/*
+
+# datasets
+dataset
+
+# environment variable
+.env
