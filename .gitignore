@@ -16,3 +16,7 @@ dataset
 
 # environment variable
 .env
+.key
+
+# papers
+docs/paper
