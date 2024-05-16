@@ -7,7 +7,6 @@ def auto_orient(img:Image.Image) -> Image.Image:
 
         if piexif.ImageIFD.Orientation in exif_dict["0th"]:
             orientation = exif_dict["0th"].pop(piexif.ImageIFD.Orientation)
-            exif_bytes = piexif.dump(exif_dict)
 
             if orientation == 2:
                 img = img.transpose(Image.FLIP_LEFT_RIGHT)

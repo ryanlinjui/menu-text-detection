@@ -1,8 +1,11 @@
 import matplotlib.pyplot as plt
-from matplotlib.path import Path
 import matplotlib.patches as patches
+from matplotlib.path import Path
 
-def vertex2text(text_vertex:dict, is_patches_return:bool=False):
+def vertex2text(
+    text_vertex:dict,
+    is_patches_return:bool=False
+):
     patches_list = []
     return_patches = []
     raw_text = "" 

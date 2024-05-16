@@ -1,9 +1,13 @@
-from google.cloud import vision
-from google.oauth2 import service_account
-from PIL import Image
+import os
 from io import BytesIO
 
-import os
+from google.cloud import vision
+from google.oauth2 import service_account
+from google.api_core.exceptions import (
+    GoogleAPICallError,
+    InvalidArgument
+)
+from PIL import Image
 
 client = vision.ImageAnnotatorClient(credentials=service_account.Credentials.from_service_account_file(os.getenv("GCLOUD_CREDENTIALS_PATH")))
 
@@ -35,12 +39,37 @@ def run(img:bytes|str|Image.Image) -> dict:
     else:
         raise ValueError("Unsupported file type, only bytes, str, or Image.Image types are allowed")
     
-    image = vision.Image(content=content)        
-    response = client.text_detection(image=image)
+    image = vision.Image(content=content)
     
-    if response.error.message:
-        raise Exception(
-            "{}\nFor more info on error messages, check: "
-            "https://cloud.google.com/apis/design/errors".format(response.error.message)
+    try:
+        response = self.client.text_detection(image=image)
+
+    except GoogleAPICallError as e:
+        raise GoogleAPICallError(
+            f"API call error: {e.message}\n"
+            "For more info on error messages, check: \n"
+            "https://cloud.google.com/apis/design/errors"
         )
+
+    except InvalidArgument as e:
+        raise InvalidArgument(
+            f"Invalid argument: {e.message}\n"
+            "For more info on error messages, check: \n"
+            "https://cloud.google.com/apis/design/errors"
+        )
+    
+    except Exception as e:
+        raise Exception(
+            f"Unknown error: {e.message}\n"
+            "For more info on error messages, check: \n"
+            "https://cloud.google.com/apis/design/errors"
+        )
+
+    if response.error.message:
+        raise GoogleAPICallError(
+            f"{response.error.message}\n"
+            "For more info on error messages, check: \n"
+            "https://cloud.google.com/apis/design/errors"
+        )
+
     return payload_process(response)

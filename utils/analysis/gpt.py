@@ -1,5 +1,6 @@
-import json
 from os import getenv
+import json
+
 from openai import OpenAI
 
 client = OpenAI(api_key=getenv("OPENAI_API_KEY"))
