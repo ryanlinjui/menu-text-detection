@@ -1,1 +1,0 @@
-from .vertex import vertex2text

@@ -1,22 +1,18 @@
-# poetry
-.venv
-poetry.lock
-
 # mac
 .DS_Store
 
 # cache
 __pycache__
 
-# temp file
-tmp/*
-
 # datasets
-dataset
-
-# environment variable
-.env
-.key
+datasets
 
 # papers
-docs/paper
+docs/papers
+
+# pixi
+.pixi
+pixi.lock
+
+# gradio
+.gradio
