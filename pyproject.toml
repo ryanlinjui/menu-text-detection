@@ -1,7 +1,12 @@
 [project]
 authors = [{name = "ryanlinjui", email = "ryanlinjui@gmail.com"}]
-dependencies = ["gradio>=5.26.0,<6"]
-description = "Add a short description here"
+dependencies = [
+    "gradio>=5.26.0,<6",
+    "google-genai>=1.12.1,<2",
+    "openai>=1.76.2,<2",
+    "pillow>=11.2.1,<12"
+, "dotenv>=0.9.9,<0.10"]
+description = "Extract structured menu information from images into JSON using a fine-tuned Donut E2E model."
 name = "menu-text-detection"
 requires-python = ">= 3.11"
 version = "0.1.0"

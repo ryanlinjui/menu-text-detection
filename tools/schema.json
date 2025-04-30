@@ -1,0 +1,12 @@
+{
+    "restaurant": ["Name of the restaurant", "string"],
+    "address": ["Address of the restaurant", "string"],
+    "phone": ["Phone number of the restaurant", "string"],
+    "business_hours": ["Business hours of the restaurant", "string"],
+    "items": [
+        {
+            "name": ["Name of the menu item", "string"],
+            "price": ["Price of the menu item", "float"]
+        }
+    ]
+}

@@ -1,7 +1,18 @@
+import os
 import json
 
 import numpy as np
 import gradio as gr
+from dotenv import load_dotenv
+
+from menu.llm import (
+    GeminiAPI,
+    OpenAIAPI
+)
+
+load_dotenv()
+GEMINI_API_TOKEN = os.getenv("GIMINI_API_TOKEN", "")
+OPENAI_API_TOKEN = os.getenv("OPENAI_API_TOKEN", "")
 
 SOURCE_CODE_GH_URL = "https://github.com/ryanlinjui/menu-text-detection"
 BADGE_URL = "https://img.shields.io/badge/GitHub_Code-Click_Here!!-default?logo=github"
@@ -13,46 +24,35 @@ EXAMPLE_IMAGE_LIST = [
 ]
 MODEL_LIST = [
     "Donut Model",
-    "Gemini API: Gemini-1.5-turbo",
-    "Gemini API: Gemini-2.0-turbo",
-    "Gemini API: Gemini-2.0-turbo-16k",
-    "OpenAI API: gpt-4.0-turbo",
-    "OpenAI API: gpt-3.5-turbo",
-    "OpenAI API: gpt-4.0-turbo-16k"
+    "gemini-2.0-flash",
+    "gemini-2.5-flash-preview-04-17",
+    "gemini-2.5-pro-preview-03-25",
+    "gpt-4.1",
+    "gpt-4o",
+    "o4-mini"
 ]
 
 def handle(image: np.ndarray, model: str, api_token: str) -> str:
     if image is None:
         raise gr.Error("Please upload an image first.")
-
-    result = {
-        "restaurant_name": "阿平麵食館",
-        "business_hours": "",
-        "contact": {
-            "address": "新北市安民街309號",
-            "phone": "(02)22112580"
-        },
-        "dish": [{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"},{"name": "三寶牛肉麵", "price": "180"}]
-    }
-    if model == MODEL_LIST[0]:
-        result["model_info"] = "Using local Donut model for text detection"
-
-    elif model == MODEL_LIST[1:4]:
-        if len(api_token) < 10:
-            raise gr.Error("Please provide a valid Gemini API token.")
-        
-        result["token_status"] = f"Valid Gemini API token provided: {api_token}"
-
-    elif model == MODEL_LIST[4:]:
-        if len(api_token) < 10:
-            raise gr.Error("Please provide a valid OpenAI API token.")
-        
-        result["token_status"] = f"Valid OpenAI API token provided: {api_token}"
     
+    if model == MODEL_LIST[0]:
+        result = {"error": "Donut model is not supported yet."}
+    
+    elif model in MODEL_LIST[1:]:
+        if len(api_token) < 10:
+            raise gr.Error(f"Please provide a valid token for {model}.")
+        try:
+            if model in MODEL_LIST[1:4]:
+                result = GeminiAPI.call(image, model, api_token)
+            else:
+                result = OpenAIAPI.call(image, model, api_token)
+        except Exception as e:
+            raise gr.Error(f"Failed to process with API model {model}: {str(e)}")
     else:
         raise gr.Error("Invalid model selection. Please choose a valid model.")
     
-    return json.dumps(result, indent=4)
+    return json.dumps(result, indent=4, ensure_ascii=False)
 
 def UserInterface() -> gr.Interface:
     with gr.Blocks(
@@ -125,9 +125,14 @@ def UserInterface() -> gr.Interface:
         
         def update_token_visibility(choice):
             if choice in MODEL_LIST[1:]:
-                return gr.Textbox(visible=True)
+                current_token = ""
+                if choice in MODEL_LIST[1:4]:
+                    current_token = GEMINI_API_TOKEN
+                elif choice in MODEL_LIST[4:]:
+                    current_token = OPENAI_API_TOKEN
+                return gr.update(visible=True, value=current_token)
             else:
-                return gr.Textbox(visible=False)
+                return gr.update(visible=False)
                 
         model_choice_dropdown.change(
             fn=update_token_visibility,
@@ -145,4 +150,4 @@ def UserInterface() -> gr.Interface:
 
 if __name__ == "__main__":
     demo = UserInterface()
-    demo.launch(share=True)
+    demo.launch()

@@ -1,0 +1,1 @@
+Analyze the provided menu image and extract the restaurant information, including its name, address, phone number, business hours, and a list of menu items with their names and prices. Structure the extracted information according to the provided JSON schema. If some information is not present in the image, use appropriate placeholders like null for price.
