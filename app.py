@@ -17,10 +17,11 @@ OPENAI_API_TOKEN = os.getenv("OPENAI_API_TOKEN", "")
 SOURCE_CODE_GH_URL = "https://github.com/ryanlinjui/menu-text-detection"
 BADGE_URL = "https://img.shields.io/badge/GitHub_Code-Click_Here!!-default?logo=github"
 
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/ryanlinjui/menu-text-detection/main"
 EXAMPLE_IMAGE_LIST = [
-    "examples/menu-hd.jpg",
-    "examples/menu-vs.jpg",
-    "examples/menu-si.jpg"
+    f"{GITHUB_RAW_URL}/examples/menu-hd.jpg",
+    f"{GITHUB_RAW_URL}/examples/menu-vs.jpg",
+    f"{GITHUB_RAW_URL}/examples/menu-si.jpg"
 ]
 MODEL_LIST = [
     "Donut Model",
