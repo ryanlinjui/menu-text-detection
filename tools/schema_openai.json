@@ -1,0 +1,48 @@
+{
+    "type": "function",
+    "name": "extract_menu_data",
+    "description": "Extract structured menu information from images.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "restaurant": {
+                "type": "string",
+                "description": "Name of the restaurant. If the name is not available, it should be ''."
+            },
+            "address": {
+                "type": "string",
+                "description": "Address of the restaurant. If the address is not available, it should be ''."
+            },
+            "phone": {
+                "type": "string",
+                "description": "Phone number of the restaurant. If the phone number is not available, it should be ''."
+            },
+            "business_hours": {
+                "type": "string",
+                "description": "Business hours of the restaurant. If the business hours are not available, it should be ''."
+            },
+            "dishes": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Name of the menu item."
+                        },
+                        "price": {
+                            "type": "number",
+                            "format": "float",
+                            "description": "Price of the menu item. If the price is not available, it should be -1."
+                        }
+                    },
+                    "required": ["name", "price"],
+                    "additionalProperties": false
+                },
+                "description": "List of menu dishes item."
+            }
+        },
+        "required": ["restaurant", "address", "phone", "business_hours", "dishes"],
+        "additionalProperties": false
+    }
+}
