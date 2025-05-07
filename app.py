@@ -9,6 +9,7 @@ from menu.llm import (
     GeminiAPI,
     OpenAIAPI
 )
+from menu.donut import DonutFinetuned
 
 load_dotenv()
 GEMINI_API_TOKEN = os.getenv("GIMINI_API_TOKEN", "")
@@ -38,7 +39,7 @@ def handle(image: np.ndarray, model: str, api_token: str) -> str:
         raise gr.Error("Please upload an image first.")
     
     if model == MODEL_LIST[0]:
-        result = {"error": "Donut model is not supported yet."}
+        result = DonutFinetuned.predict(image)
     
     elif model in MODEL_LIST[1:]:
         if len(api_token) < 10:
