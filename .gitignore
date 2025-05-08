@@ -10,6 +10,9 @@ datasets
 # papers
 docs/papers
 
+# uv
+.venv
+
 # pixi
 .pixi
 pixi.lock
@@ -19,3 +22,7 @@ pixi.lock
 
 # env
 .env
+
+# checkpoint
+.checkpoints/*
+!.checkpoints/.gitkeep

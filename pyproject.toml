@@ -1,31 +1,21 @@
 [project]
-authors = [{name = "ryanlinjui", email = "ryanlinjui@gmail.com"}]
-dependencies = [
-    "gradio>=5.26.0,<6",
-    "google-genai>=1.12.1,<2",
-    "openai>=1.76.2,<2",
-    "pillow>=11.2.1,<12",
-    "dotenv>=0.9.9,<0.10",
-]
-description = "Extract structured menu information from images into JSON using a fine-tuned Donut E2E model."
 name = "menu-text-detection"
-requires-python = ">= 3.11"
 version = "0.1.0"
-
-[build-system]
-build-backend = "hatchling.build"
-requires = ["hatchling"]
-
-[tool.pixi.project]
-channels = ["conda-forge"]
-platforms = ["osx-arm64"]
-
-[tool.pixi.dependencies]
-transformers = ">=4.51.3,<5"
-notebook = ">=7.4.0,<8"
-datasets = ">=3.5.0,<4"
-huggingface_hub = ">=0.30.2,<0.31"
-pytorch = ">=2.6.0,<3"
-protobuf = ">=5.29.3,<6"
-sentencepiece = ">=0.2.0,<0.3"
-accelerate = ">=1.5.2,<2"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "accelerate>=1.6.0",
+    "datasets>=3.6.0",
+    "dotenv>=0.9.9",
+    "google-genai>=1.14.0",
+    "gradio>=5.29.0",
+    "huggingface-hub>=0.31.1",
+    "matplotlib>=3.10.1",
+    "notebook>=7.4.2",
+    "openai>=1.77.0",
+    "pillow>=11.2.1",
+    "protobuf>=6.30.2",
+    "sentencepiece>=0.2.0",
+    "transformers>=4.51.3",
+]
