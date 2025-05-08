@@ -22,3 +22,4 @@ jobs:
                   user: ryanlinjui # Hugging Face username or organization name
                   space: menu-text-detection # Hugging Face space name
                   token: ${{ secrets.HF_TOKEN }} # Hugging Face token
+                  python_version: 3.11 # Python version

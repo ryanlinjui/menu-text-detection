@@ -78,12 +78,8 @@ def UserInterface() -> gr.Interface:
         }
         """
     ) as gradio_interface:
-        gr.Markdown(
-            f"""
-            [![GitHub Code]({BADGE_URL})]({SOURCE_CODE_GH_URL})
-            # Menu Text Detection
-            """
-        )
+        gr.HTML(f'<a href="{SOURCE_CODE_GH_URL}"><img src="{BADGE_URL}" alt="GitHub Code"/></a>')
+        gr.Markdown("# Menu Text Detection")
         
         with gr.Row():
             with gr.Column(scale=1, min_width=500):
