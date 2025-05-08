@@ -1,7 +1,8 @@
 [project]
+authors = [{name = "ryanlinjui", email = "ryanlinjui@gmail.com"}]
 name = "menu-text-detection"
 version = "0.1.0"
-description = "Add your description here"
+description = "Extract structured menu information from images into JSON using a fine-tuned Donut E2E model."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
