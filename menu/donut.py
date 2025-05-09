@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import numpy as np
 from PIL import Image
@@ -41,6 +41,35 @@ class DonutDatasets:
         - validation_split: Fraction of data to use for validation (0.0-1.0)
         - test_split: Fraction of data to use for testing (0.0-1.0)
         - ignore_index: Index to ignore in labels (default: -100)
+        - sort_json_key: Whether to sort JSON keys (default: True)
+        - seed: Random seed for reproducibility. If None, use OS random seed (default: None)
+        - shuffle: Whether to shuffle the dataset (default: True)
+    Returns:
+        - DonutDatasets object with train/validation/test splits
+    Example:
+        datasets = DonutDatasets(
+            datasets=dataset_dict,
+            processor=processor,
+            image_column="image",
+            annotation_column="annotation",
+            task_start_token="<s_task>",
+            prompt_end_token="<s_prompt>",
+            max_length=512,
+            train_split=0.8,
+            validation_split=0.1,
+            test_split=0.1
+        )
+        train_dataset = datasets["train"]
+        validation_dataset = datasets["validation"]
+        test_dataset = datasets["test"]
+    Note:
+        - The dataset must be a DatasetDict with train/validation/test splits
+        - The processor must be a DonutProcessor instance
+        - The image_column and annotation_column must exist in the dataset
+        - The task_start_token and prompt_end_token must be unique tokens
+        - The max_length should be set according to the model's maximum input length
+        - The ignore_index is used for padding in labels (default: -100)
+        - The sort_json_key option determines whether JSON keys are sorted or not
     """
     def __init__(
         self,
@@ -55,7 +84,9 @@ class DonutDatasets:
         validation_split: float = 0.0,
         test_split: float = 0.0,
         ignore_index: int = -100,
-        sort_json_key: bool = True
+        sort_json_key: bool = True,
+        seed: Optional[int] = None,
+        shuffle: bool = True
     ):
         assert abs(train_split + validation_split + test_split - 1.0) < 1e-6, (
             "train/validation/test splits must sum to 1"
@@ -65,21 +96,21 @@ class DonutDatasets:
         self.image_column = image_column
         self.annotation_column = annotation_column
         self.max_length = max_length
-        self.ignore_index = ignore_index
-        self.sort_json_key = sort_json_key
         self.task_start_token = task_start_token
         self.prompt_end_token = prompt_end_token or task_start_token
+        self.ignore_index = ignore_index
+        self.sort_json_key = sort_json_key
 
         # Perform split on provided datasets
         raw = datasets
         parts: Dict[str, Any] = {}
         if train_split < 1.0:
-            split1 = raw["train"].train_test_split(test_size=1 - train_split, seed=42)
+            split1 = raw["train"].train_test_split(test_size=1 - train_split, seed=seed, shuffle=shuffle)
             parts["train"] = split1["train"]
             rest = split1["test"]
             if validation_split > 0:
                 val_frac = validation_split / (validation_split + test_split)
-                split2 = rest.train_test_split(test_size=1 - val_frac, seed=42)
+                split2 = rest.train_test_split(test_size=1 - val_frac, seed=seed, shuffle=shuffle)
                 parts["validation"] = split2["train"]
                 parts["test"] = split2["test"]
             else:
@@ -189,5 +220,6 @@ class _SplitDataset(Dataset):
             "pixel_values": pixel_values,
             "input_ids": input_ids,
             "attention_mask": tokens.attention_mask.squeeze(0),
-            "labels": labels
+            "labels": labels,
+            "target_sequence": target_seq
         }
