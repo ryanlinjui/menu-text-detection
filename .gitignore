@@ -13,10 +13,6 @@ docs/papers
 # uv
 .venv
 
-# pixi
-.pixi
-pixi.lock
-
 # gradio
 .gradio
 
