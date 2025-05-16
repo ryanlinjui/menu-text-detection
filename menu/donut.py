@@ -79,6 +79,7 @@ class DonutDatasets:
         annotation_column: str,
         task_start_token: str,
         prompt_end_token: str,
+        image_size: tuple = (1280, 960),
         max_length: int = 512,
         train_split: float = 1.0,
         validation_split: float = 0.0,
@@ -95,11 +96,22 @@ class DonutDatasets:
         self.tokenizer = processor.tokenizer
         self.image_column = image_column
         self.annotation_column = annotation_column
+        self.image_size = image_size
         self.max_length = max_length
         self.task_start_token = task_start_token
         self.prompt_end_token = prompt_end_token or task_start_token
         self.ignore_index = ignore_index
         self.sort_json_key = sort_json_key
+
+        # Resize image size by using the PIL
+        resized_datasets = {}
+        for split, dataset in datasets.items():
+            resized_datasets[split] = dataset.map(
+                lambda x: {"image": x[self.image_column].resize(self.image_size, Image.LANCZOS).convert("RGB")},
+                remove_columns=[self.image_column],
+                num_proc=4,
+            )
+        datasets = DatasetDict(resized_datasets)
 
         # Perform split on provided datasets
         raw = datasets
