@@ -12,7 +12,7 @@ from menu.llm import (
 from menu.donut import DonutFinetuned
 
 load_dotenv()
-GEMINI_API_TOKEN = os.getenv("GIMINI_API_TOKEN", "")
+GEMINI_API_TOKEN = os.getenv("GEMINI_API_TOKEN", "")
 OPENAI_API_TOKEN = os.getenv("OPENAI_API_TOKEN", "")
 
 SOURCE_CODE_GH_URL = "https://github.com/ryanlinjui/menu-text-detection"
