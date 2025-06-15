@@ -11,7 +11,7 @@ from menu.llm import (
 )
 from menu.donut import DonutFinetuned
 
-load_dotenv()
+load_dotenv(override=True)
 GEMINI_API_TOKEN = os.getenv("GEMINI_API_TOKEN", "")
 OPENAI_API_TOKEN = os.getenv("OPENAI_API_TOKEN", "")
 
@@ -27,8 +27,8 @@ EXAMPLE_IMAGE_LIST = [
 MODEL_LIST = [
     "Donut Model",
     "gemini-2.0-flash",
-    "gemini-2.5-flash-preview-04-17",
-    "gemini-2.5-pro-preview-03-25",
+    "gemini-2.5-flash-preview-05-20",
+    "gemini-2.5-pro-preview-06-05",
     "gpt-4.1",
     "gpt-4o",
     "o4-mini"
@@ -54,7 +54,7 @@ def handle(image: np.ndarray, model: str, api_token: str) -> str:
     else:
         raise gr.Error("Invalid model selection. Please choose a valid model.")
     
-    return json.dumps(result, indent=4, ensure_ascii=False)
+    return json.dumps(result, indent=4, ensure_ascii=False, sort_keys=True)
 
 def UserInterface() -> gr.Interface:
     with gr.Blocks(
