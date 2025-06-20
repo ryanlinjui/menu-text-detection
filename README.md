@@ -1,7 +1,6 @@
 # Menu Text Detection System
 
-Extract structured menu information from images into JSON using a fine-tuned Donut E2E model.  
-> Based on [Donut by Clova AI (ECCV ’22)](https://github.com/clovaai/donut)
+Extract structured menu information from images into JSON using a fine-tuned E2E model or LLM.  
 
 <div align="center">
 
@@ -27,7 +26,7 @@ Currently supports the following information from menu images:
 > For the JSON schema, see [tools directory](./tools).
 
 ### Supported Methods to Extract Menu Information
-- Fine-tuned Donut model
+- Fine-tuned model: Donut - [by Clova AI (ECCV ’22)](https://github.com/clovaai/donut)
 - OpenAI GPT API  
 - Google Gemini API
 
