@@ -1,16 +1,11 @@
 # Menu Text Detection System
 
-Extract structured menu information from images into JSON using a fine-tuned Donut E2E model.  
-> Based on [Donut by Clova AI (ECCV ’22)](https://github.com/clovaai/donut)
+Extract structured menu information from images into JSON using a fine-tuned E2E model or LLM.  
 
-<div align="center">
-
-<img src="./assets/demo.gif" alt="demo" width="500"/><br>
-
-[![Gradio Space Demo](https://img.shields.io/badge/GradioSpace-Demo-important?logo=huggingface)](https://huggingface.co/spaces/ryanlinjui/menu-text-detection)<br>
+[![Gradio Space Demo](https://img.shields.io/badge/GradioSpace-Demo-important?logo=huggingface)](https://huggingface.co/spaces/ryanlinjui/menu-text-detection)
 [![Hugging Face Models & Datasets](https://img.shields.io/badge/HuggingFace-Models_&_Datasets-important?logo=huggingface)](https://huggingface.co/collections/ryanlinjui/menu-text-detection-670ccf527626bb004bbfb39b)
 
-</div>
+https://github.com/user-attachments/assets/80e5d54c-f2c8-4593-ad9b-499e5b71d8f6
 
 ## 🚀 Features
 ### Overview
@@ -27,7 +22,7 @@ Currently supports the following information from menu images:
 > For the JSON schema, see [tools directory](./tools).
 
 ### Supported Methods to Extract Menu Information
-- Fine-tuned Donut model
+- Fine-tuned model: Donut - [by Clova AI (ECCV ’22)](https://github.com/clovaai/donut)
 - OpenAI GPT API  
 - Google Gemini API
 
