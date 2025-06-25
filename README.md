@@ -22,9 +22,12 @@ Currently supports the following information from menu images:
 > For the JSON schema, see [tools directory](./tools).
 
 ### Supported Methods to Extract Menu Information
-- Fine-tuned model: Donut - [by Clova AI (ECCV ’22)](https://github.com/clovaai/donut)
-- OpenAI GPT API  
+#### Fine-tuned E2E model and Training metrics
+- [**Donut**]() - Base model by [Clova AI (ECCV ’22)](https://github.com/clovaai/donut)
+
+#### LLM Function Calling
 - Google Gemini API
+- OpenAI GPT API
 
 ## 💻 Training / Fine-Tuning
 ### Setup
