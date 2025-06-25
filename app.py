@@ -4,6 +4,7 @@ import json
 import numpy as np
 import gradio as gr
 from dotenv import load_dotenv
+from pillow_heif import register_heif_opener
 
 from menu.llm import (
     GeminiAPI,
@@ -11,6 +12,7 @@ from menu.llm import (
 )
 from menu.donut import DonutFinetuned
 
+register_heif_opener()
 load_dotenv(override=True)
 GEMINI_API_TOKEN = os.getenv("GEMINI_API_TOKEN", "")
 OPENAI_API_TOKEN = os.getenv("OPENAI_API_TOKEN", "")
@@ -116,7 +118,7 @@ def UserInterface() -> gr.Interface:
                 gr.Markdown("## 🍽️ Menu Info")
                 menu_json_textbox = gr.Textbox(
                     label="Ouput JSON",
-                    interactive=False,
+                    interactive=True,
                     text_align="left",
                     elem_classes="large-text"
                 )
