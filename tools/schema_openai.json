@@ -31,8 +31,7 @@
                             "description": "Name of the menu item."
                         },
                         "price": {
-                            "type": "number",
-                            "format": "float",
+                            "type": "string",
                             "description": "Price of the menu item. If the price is not available, it should be -1."
                         }
                     },
