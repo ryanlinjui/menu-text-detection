@@ -23,7 +23,7 @@ Currently supports the following information from menu images:
 
 ### Supported Methods to Extract Menu Information
 #### Fine-tuned E2E model and Training metrics
-- [**Donut**]() - Base model by [Clova AI (ECCV ’22)](https://github.com/clovaai/donut)
+- [**Donut**](https://huggingface.co/ryanlinjui/donut-base-finetuned-menu) - Base model by [Clova AI (ECCV ’22)](https://github.com/clovaai/donut)
 
 #### LLM Function Calling
 - Google Gemini API
