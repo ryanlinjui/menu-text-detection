@@ -8,15 +8,21 @@ from torch.utils.data import Dataset
 from transformers import pipeline, DonutProcessor
 
 class DonutFinetuned:
-    DEFAULT_PIPELINE = pipeline(
-        task="image-to-text",
-        model="naver-clova-ix/donut-base"
+    MODEL_REPO_ID = "ryanlinjui/donut-test"
+    TASK_PROMPT_NAME = "<s_menu-text-detection>"
+
+    processor = DonutProcessor.from_pretrained(MODEL_REPO_ID)
+    pipe = pipeline(
+        task="image-text-to-text",
+        model=MODEL_REPO_ID,
+        processor=processor
     )
+
     @classmethod
     def predict(cls, image: np.ndarray) -> dict:
         image = Image.fromarray(image)
-        result = cls.DEFAULT_PIPELINE(image)
-        return result
+        outputs = cls.pipe(text=cls.TASK_PROMPT_NAME, images=image)[0]["generated_text"]
+        return cls.processor.token2json(outputs)
 
 class DonutDatasets:
     """
