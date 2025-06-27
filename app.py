@@ -27,7 +27,7 @@ EXAMPLE_IMAGE_LIST = [
     f"{GITHUB_RAW_URL}/examples/menu-si.jpg"
 ]
 MODEL_LIST = [
-    "Donut Model",
+    "(Experimental) Donut Finetuned Model",
     "gemini-2.5-pro",
     "gemini-2.5-flash",
     "gemini-2.0-flash",
@@ -108,11 +108,11 @@ def UserInterface() -> gr.Interface:
                 
                 generate_button = gr.Button("Generate Menu Information", variant="primary")
 
-                # gr.Examples(
-                #     examples=EXAMPLE_IMAGE_LIST,
-                #     inputs=menu_image,
-                #     label="Example Menu Images"
-                # )
+                gr.Examples(
+                    examples=EXAMPLE_IMAGE_LIST,
+                    inputs=menu_image,
+                    label="Example Menu Images"
+                )
             
             with gr.Column(scale=1):
                 gr.Markdown("## 🍽️ Menu Info")
