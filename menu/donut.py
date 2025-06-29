@@ -2,10 +2,178 @@ import json
 from typing import Any, Dict, Optional
 
 import numpy as np
+import torch
+import pytorch_lightning as pl
 from PIL import Image
 from datasets import DatasetDict
 from torch.utils.data import Dataset
-from transformers import pipeline, DonutProcessor
+from transformers import DonutProcessor, VisionEncoderDecoderModel, VisionEncoderDecoderConfig
+from transformers import pipeline
+from nltk.metrics import edit_distance
+
+class DonutModelPLModule(pl.LightningModule):
+    def __init__(self, config, processor, model):
+        super().__init__()
+        self.config = config
+        self.processor = processor
+        self.model = model
+        self.validation_step_outputs = []
+
+    def training_step(self, batch, batch_idx):
+        pixel_values = batch["pixel_values"]
+        labels = batch["labels"]
+        outputs = self.model(pixel_values=pixel_values, labels=labels)
+        loss = outputs.loss
+        self.log_dict({"train_loss": loss}, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        return loss
+
+    def validation_step(self, batch, batch_idx, dataset_idx=0):
+        pixel_values = batch["pixel_values"]
+        labels = batch["labels"]
+        outputs = self.model(pixel_values=pixel_values, labels=labels)
+        loss = outputs.loss
+        
+        # Generate predictions for metrics computation
+        decoder_input_ids = torch.full(
+            (pixel_values.shape[0], 1),
+            self.model.config.decoder_start_token_id,
+            device=pixel_values.device
+        )
+        
+        with torch.no_grad():
+            predictions = self.model.generate(
+                pixel_values,
+                decoder_input_ids=decoder_input_ids,
+                max_length=self.config.get("max_length", 768),
+                pad_token_id=self.processor.tokenizer.pad_token_id,
+                eos_token_id=self.processor.tokenizer.eos_token_id,
+                use_cache=True,
+                num_beams=1,
+                do_sample=False,
+                return_dict_in_generate=True
+            )
+        
+        # Get target sequences from batch
+        target_sequences = batch.get("target_sequence", [])
+        
+        self.validation_step_outputs.append({
+            "val_loss": loss,
+            "predictions": predictions.sequences,
+            "target_sequences": target_sequences
+        })
+        
+        self.log_dict({"val_loss": loss}, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        return loss
+
+    def on_validation_epoch_end(self):
+        # Compute edit distance metrics using the compute_metrics function
+        if not self.validation_step_outputs:
+            print("No validation outputs to process")
+            return
+            
+        # Collect all predictions and targets
+        all_predictions = []
+        all_targets = []
+        
+        for output in self.validation_step_outputs:
+            predictions = output["predictions"]
+            target_sequences = output["target_sequences"]
+            
+            decoded_preds = self.processor.tokenizer.batch_decode(predictions, skip_special_tokens=False)
+            all_predictions.extend(decoded_preds)
+            
+            # Handle different types of target sequences
+            if isinstance(target_sequences, str):
+                all_targets.append(target_sequences)
+            elif isinstance(target_sequences, torch.Tensor):
+                all_targets.extend(target_sequences.tolist() if target_sequences.dim() > 0 else [target_sequences.item()])
+            elif isinstance(target_sequences, (list, tuple)):
+                all_targets.extend(target_sequences)
+        
+        # Create a mock eval_pred object for compute_metrics
+        class MockEvalPred:
+            def __init__(self, predictions, targets):
+                self.predictions = predictions
+                self.targets = targets
+        
+        # Convert predictions back to token IDs for compute_metrics
+        pred_token_ids = []
+        for pred_text in all_predictions:
+            tokens = self.processor.tokenizer(pred_text, return_tensors="pt", add_special_tokens=False)
+            pred_token_ids.append(tokens.input_ids.squeeze().tolist())
+        
+        eval_pred = MockEvalPred(pred_token_ids, all_targets)
+        
+        # Use the compute_metrics function
+        metrics = self.compute_metrics(eval_pred)
+        avg_ned = metrics["normed_edit_distance"]
+        
+        # Log the metric
+        self.log("val_ned", avg_ned, on_epoch=True, prog_bar=True, logger=True)
+        
+        self.validation_step_outputs.clear()
+    
+    def compute_metrics(self, eval_pred) -> dict:
+        from functools import reduce
+        
+        # Get filtered tokens - add task prompt to ensure clean comparison
+        filtered_tokens = [
+            self.processor.tokenizer.bos_token,
+            self.processor.tokenizer.eos_token,
+            self.processor.tokenizer.pad_token,
+            self.processor.tokenizer.unk_token,
+            "<s_menu-text-detection>"  # Add task prompt to filtered tokens
+        ]
+        
+        decoded_preds = self.processor.tokenizer.batch_decode(eval_pred.predictions, skip_special_tokens=False)
+        
+        normed_eds = []
+        for idx, pred in enumerate(decoded_preds):
+            if idx < len(eval_pred.targets):
+                prediction_sequence = reduce(lambda s, t: s.replace(t, ""), filtered_tokens, pred)
+                target_sequence = reduce(lambda s, t: s.replace(t, ""), filtered_tokens, str(eval_pred.targets[idx]))
+                ed = edit_distance(prediction_sequence, target_sequence) / max(len(prediction_sequence), len(target_sequence), 1)
+                normed_eds.append(ed)
+
+                print(f"[Sample {idx+1}]")
+                print(f"  Prediction: {prediction_sequence}")
+                print(f"  Target: {target_sequence}")
+                print(f"  Normalized Edit Distance: {ed:.4f}")
+                print("-" * 40)
+
+        avg_ned = float(np.mean(normed_eds)) if normed_eds else 1.0
+        print(f"Average Normalized Edit Distance: {avg_ned:.4f}")
+        
+        return {"normed_edit_distance": avg_ned}
+
+    def configure_optimizers(self):
+        # Use same config as original notebook
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.config.get("lr", 3e-5), weight_decay=0.01)
+        
+        if "warmup_steps" in self.config:
+            from transformers import get_linear_schedule_with_warmup
+            total_steps = self.trainer.estimated_stepping_batches
+            scheduler = get_linear_schedule_with_warmup(
+                optimizer,
+                num_warmup_steps=self.config["warmup_steps"],
+                num_training_steps=total_steps
+            )
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {
+                    "scheduler": scheduler,
+                    "interval": "step",
+                }
+            }
+        return optimizer
+
+    def test_step(self, batch, batch_idx):
+        pixel_values = batch["pixel_values"]
+        labels = batch["labels"]
+        outputs = self.model(pixel_values=pixel_values, labels=labels)
+        loss = outputs.loss
+        self.log_dict({"test_loss": loss}, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        return loss
 
 class DonutFinetuned:
     MODEL_REPO_ID = "ryanlinjui/donut-test"
@@ -196,6 +364,7 @@ class _SplitDataset(Dataset):
             gt = sample[self.annotation_column]
             if isinstance(gt, str):
                 gt = json.loads(gt)
+            # Don't include task start token in target sequence
             seq = self._json_to_token(gt) + self.tokenizer.eos_token
             self.gt_token_sequences.append(seq)
 
@@ -241,3 +410,24 @@ class _SplitDataset(Dataset):
             "labels": labels,
             "target_sequence": target_seq
         }
+
+def load_trained_model_from_checkpoint(checkpoint_path: str, config: dict, processor: DonutProcessor, model: VisionEncoderDecoderModel):
+    """
+    Load a trained PyTorch Lightning model from checkpoint
+    
+    Args:
+        checkpoint_path: Path to the .ckpt file
+        config: Configuration dictionary used during training
+        processor: DonutProcessor instance
+        model: Base VisionEncoderDecoderModel instance
+    
+    Returns:
+        DonutModelPLModule: Loaded PyTorch Lightning module
+    """
+    pl_module = DonutModelPLModule.load_from_checkpoint(
+        checkpoint_path, 
+        config=config, 
+        processor=processor, 
+        model=model
+    )
+    return pl_module
