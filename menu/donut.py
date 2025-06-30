@@ -240,6 +240,7 @@ class DonutTrainer:
                     print(f" Normed ED: {scores[0]}")
 
             avg_edit_distance = np.mean(scores)
+            print(f"Average Edit Distance: {avg_edit_distance:.4f}")
             self.log("val_edit_distance", avg_edit_distance, on_step=False, on_epoch=True, prog_bar=True)
             self.log("val_accuracy", 1 - avg_edit_distance, on_step=False, on_epoch=True, prog_bar=True)
 
@@ -270,9 +271,14 @@ class DonutTrainer:
 
         def _upload_logs(self, log_dir: str, epoch_info):
             try:
-                upload_folder(log_dir, f"tensorboard_logs", DonutTrainer.huggingface_model_id, 
+                print(f"Attempting to upload logs from: {log_dir}")
+                upload_folder(log_dir, repo_id=DonutTrainer.huggingface_model_id, 
+                            folder_path="tensorboard_logs",
                             commit_message=f"Upload logs - epoch {epoch_info}", ignore_patterns=["*.tmp", "*.lock"])
-            except: pass
+                print(f"Successfully uploaded logs for epoch {epoch_info}")
+            except Exception as e:
+                print(f"Failed to upload logs: {e}")
+                pass
 
     @classmethod
     def train(
@@ -282,7 +288,14 @@ class DonutTrainer:
         huggingface_model_id: str,
         epochs: int,
         train_batch_size: int,
+        val_batch_size: int,
         learning_rate: float,
+        val_check_interval: float,
+        check_val_every_n_epoch: int,
+        gradient_clip_val: float,
+        num_training_samples_per_epoch: int,
+        num_nodes: int,
+        warmup_steps: int,
         ground_truth_key: str = "ground_truth",
     ):
         cls.huggingface_model_id = huggingface_model_id
@@ -322,29 +335,35 @@ class DonutTrainer:
         
         config = {
             "max_epochs": epochs,
-            "val_check_interval": 0.2, # how many times we want to validate during an epoch
-            "check_val_every_n_epoch": 1,
-            "gradient_clip_val": 1.0,
-            "num_training_samples_per_epoch": 800,
+            "val_check_interval": val_check_interval, # how many times we want to validate during an epoch
+            "check_val_every_n_epoch": check_val_every_n_epoch,
+            "gradient_clip_val": gradient_clip_val,
+            "num_training_samples_per_epoch": num_training_samples_per_epoch,
             "lr": learning_rate,
             "train_batch_sizes": [train_batch_size],
-            "val_batch_sizes": [1],
+            "val_batch_sizes": [val_batch_size],
             # "seed":2022,
-            "num_nodes": 1,
-            "warmup_steps": 60, # 10%
+            "num_nodes": num_nodes,
+            "warmup_steps": warmup_steps, # 10%
             "result_path": "./.checkpoints",
             "verbose": True,
         }
         model_module = cls.DonutModelPLModule(config, cls.processor, cls.model)
 
+        device = (
+            "cuda"
+            if torch.cuda.is_available()
+            else "mps" if torch.backends.mps.is_available() else "cpu"
+        )
+        print(f"Using {device} device")
         trainer = pl.Trainer(
-                accelerator="gpu",
-                devices=1,
+                accelerator="gpu" if device == "cuda" else "mps" if device == "mps" else "cpu",
+                devices=1 if device == "cuda" else 0,
                 max_epochs=config.get("max_epochs"),
                 val_check_interval=config.get("val_check_interval"),
                 check_val_every_n_epoch=config.get("check_val_every_n_epoch"),
                 gradient_clip_val=config.get("gradient_clip_val"),
-                precision=16, # we'll use mixed precision
+                precision=16 if device == "cuda" else 32, # we'll use mixed precision if device == "cuda"
                 num_sanity_val_steps=0,
                 logger=TensorBoardLogger(save_dir="./.checkpoints", name="donut_training", version=None),
                 callbacks=[cls.PushToHubCallback()]

@@ -1,3 +1,5 @@
+from typing import Optional
+
 from datasets import Dataset, DatasetDict
 
 def split_dataset(
@@ -5,7 +7,7 @@ def split_dataset(
     train: float,
     validation: float,
     test: float,
-    seed: int = 42
+    seed: Optional[int] = None
 ) -> DatasetDict:
     """
     Split a single-split Hugging Face Dataset into train/validation/test subsets.
@@ -16,7 +18,7 @@ def split_dataset(
         val (float): Proportion of data for the validation split (0 < val < 1).
         test (float): Proportion of data for the test split (0 < test < 1).
                             Must satisfy train + val + test == 1.0.
-        seed (int): Random seed for reproducibility (default: 42).
+        seed (int): Random seed for reproducibility (default: None).
 
     Returns:
         DatasetDict: A dictionary with keys "train", "validation", and "test".
