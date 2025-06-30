@@ -27,7 +27,7 @@ EXAMPLE_IMAGE_LIST = [
     f"{GITHUB_RAW_URL}/examples/menu-si.jpg"
 ]
 MODEL_LIST = [
-    "(Experimental) Donut Finetuned Model",
+    "Donut (Document Parsing Task) Finetuned Model",
     "gemini-2.5-pro",
     "gemini-2.5-flash",
     "gemini-2.0-flash",
