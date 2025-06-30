@@ -23,8 +23,7 @@ Currently supports the following information from menu images:
 
 ### Supported Methods to Extract Menu Information
 #### Fine-tuned E2E model and Training metrics
-- [**Donut**](https://huggingface.co/ryanlinjui/donut-base-finetuned-menu) - Base model by [Clova AI (ECCV ’22)](https://github.com/clovaai/donut)
-  > Fine-tuning...
+- [**Donut (Document Parsing Task)**](https://huggingface.co/ryanlinjui/donut-base-finetuned-menu) - Base model by [Clova AI (ECCV ’22)](https://github.com/clovaai/donut)
 
 #### LLM Function Calling
 - Google Gemini API
@@ -37,6 +36,8 @@ Use [uv](https://github.com/astral-sh/uv) to set up the development environment:
 ```bash
 uv sync
 ```
+
+> or use `pip install -r requirements.txt` if it has any problems
 
 ### Training Script (Datasets collecting, Fine-Tuning)
 Please refer [`train.ipynb`](./train.ipynb). Use Jupyter Notebook for training:
