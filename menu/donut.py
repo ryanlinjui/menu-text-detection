@@ -190,6 +190,7 @@ class DonutTrainer:
             self.config = config
             self.processor = processor
             self.model = model
+            self.validation_step_outputs = []
 
         def training_step(self, batch, batch_idx):
             pixel_values, labels, _ = batch
@@ -197,9 +198,8 @@ class DonutTrainer:
             outputs = self.model(pixel_values, labels=labels)
             loss = outputs.loss
             
-            # Log training metrics
-            self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
-            self.log("learning_rate", self.trainer.optimizers[0].param_groups[0]['lr'], on_step=True, on_epoch=False)
+            # Log only train_loss_step
+            self.log("train_loss_step", loss, on_step=True, on_epoch=False, prog_bar=True)
             
             return loss
 
@@ -239,12 +239,26 @@ class DonutTrainer:
                     print(f"    Answer: {answer}")
                     print(f" Normed ED: {scores[0]}")
 
-            avg_edit_distance = np.mean(scores)
-            print(f"Average Edit Distance: {avg_edit_distance:.4f}")
-            self.log("val_edit_distance", avg_edit_distance, on_step=False, on_epoch=True, prog_bar=True)
-            self.log("val_accuracy", 1 - avg_edit_distance, on_step=False, on_epoch=True, prog_bar=True)
+            # Return scores for epoch-level aggregation
+            output = {"edit_distances": scores}
+            self.validation_step_outputs.append(output)
+            return output
 
-            return scores
+        def on_validation_epoch_end(self):
+            # Collect all edit distances from all validation steps
+            all_edit_distances = []
+            for output in self.validation_step_outputs:
+                all_edit_distances.extend(output["edit_distances"])
+            
+            # Calculate average edit distance across entire validation set
+            avg_edit_distance = np.mean(all_edit_distances)
+            print(f"Average Edit Distance: {avg_edit_distance:.4f}")
+            
+            # Log the required metrics
+            self.log("avg_val_edit_distance", avg_edit_distance, on_epoch=True, prog_bar=True)
+            
+            # Clear the list for next epoch
+            self.validation_step_outputs.clear()
 
         def configure_optimizers(self):
             # you could also add a learning rate scheduler if you want
@@ -272,8 +286,8 @@ class DonutTrainer:
         def _upload_logs(self, log_dir: str, epoch_info):
             try:
                 print(f"Attempting to upload logs from: {log_dir}")
-                upload_folder(log_dir, repo_id=DonutTrainer.huggingface_model_id, 
-                            folder_path="tensorboard_logs",
+                upload_folder(folder_path=log_dir, repo_id=DonutTrainer.huggingface_model_id, 
+                            path_in_repo="tensorboard_logs",
                             commit_message=f"Upload logs - epoch {epoch_info}", ignore_patterns=["*.tmp", "*.lock"])
                 print(f"Successfully uploaded logs for epoch {epoch_info}")
             except Exception as e:
