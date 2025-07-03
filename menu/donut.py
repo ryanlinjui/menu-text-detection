@@ -8,9 +8,9 @@ import re
 import random
 from typing import Any, List, Tuple, Dict
 
-import PIL
 import torch
 import numpy as np
+from PIL import Image
 from tqdm.auto import tqdm
 from nltk import edit_distance
 import pytorch_lightning as pl
@@ -46,7 +46,7 @@ class DonutFinetuned:
         self.model.to(self.device)
         print(f"Using {self.device} device")
 
-    def predict(self, image: PIL.Image.Image) -> Dict[str, Any]:
+    def predict(self, image: Image.Image) -> Dict[str, Any]:
         # prepare encoder inputs
         pixel_values = self.processor(image.convert("RGB"), return_tensors="pt").pixel_values
         pixel_values = pixel_values.to(self.device)

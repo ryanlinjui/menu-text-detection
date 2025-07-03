@@ -1,8 +1,8 @@
 import os
 import json
 
-import PIL
 import gradio as gr
+from PIL import Image
 from dotenv import load_dotenv
 from pillow_heif import register_heif_opener
 
@@ -26,8 +26,10 @@ EXAMPLE_IMAGE_LIST = [
     f"{GITHUB_RAW_URL}/examples/menu-vs.jpg",
     f"{GITHUB_RAW_URL}/examples/menu-si.jpg"
 ]
-MODEL_LIST = [
-    "Donut (Document Parsing Task) Finetuned Model",
+FINETUNED_MODEL_LIST = [
+    "Donut (Document Parsing Task) Fine-tuned Model"
+]
+LLM_MODEL_LIST = [
     "gemini-2.5-pro",
     "gemini-2.5-flash",
     "gemini-2.0-flash",
@@ -36,18 +38,20 @@ MODEL_LIST = [
     "o4-mini"
 ]
 
-def handle(image: PIL.Image.Image, model: str, api_token: str) -> str:
+donut_finetuned = DonutFinetuned("ryanlinjui/donut-base-finetuned-menu")
+
+def handle(image: Image.Image, model: str, api_token: str) -> str:
     if image is None:
         raise gr.Error("Please upload an image first.")
     
-    if model == MODEL_LIST[0]:
-        result = DonutFinetuned.predict(image)
+    if model == FINETUNED_MODEL_LIST[0]:
+        result = donut_finetuned.predict(image)
     
-    elif model in MODEL_LIST[1:]:
+    elif model in LLM_MODEL_LIST:
         if len(api_token) < 10:
             raise gr.Error(f"Please provide a valid token for {model}.")
         try:
-            if model in MODEL_LIST[1:4]:
+            if model in LLM_MODEL_LIST[:3]:
                 result = GeminiAPI.call(image, model, api_token)
             else:
                 result = OpenAIAPI.call(image, model, api_token)
@@ -94,8 +98,8 @@ def UserInterface() -> gr.Interface:
                 
                 gr.Markdown("## 🤖 Model Selection")
                 model_choice_dropdown = gr.Dropdown(
-                    choices=MODEL_LIST,
-                    value=MODEL_LIST[0],
+                    choices=FINETUNED_MODEL_LIST + LLM_MODEL_LIST,
+                    value=FINETUNED_MODEL_LIST[0],
                     label="Select Text Detection Model"
                 )
                 
@@ -124,11 +128,11 @@ def UserInterface() -> gr.Interface:
                 )
         
         def update_token_visibility(choice):
-            if choice in MODEL_LIST[1:]:
+            if choice in LLM_MODEL_LIST:
                 current_token = ""
-                if choice in MODEL_LIST[1:4]:
+                if choice in LLM_MODEL_LIST[:3]:
                     current_token = GEMINI_API_TOKEN
-                elif choice in MODEL_LIST[4:]:
+                else:
                     current_token = OPENAI_API_TOKEN
                 return gr.update(visible=True, value=current_token)
             else:
