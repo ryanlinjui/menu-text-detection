@@ -4,9 +4,8 @@ name = "menu-text-detection"
 version = "0.1.0"
 description = "Extract structured menu information from images into JSON using a fine-tuned Donut E2E model."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = "==3.11.*"
 dependencies = [
-    "accelerate>=1.6.0",
     "datasets>=3.6.0",
     "dotenv>=0.9.9",
     "google-genai>=1.14.0",
@@ -22,5 +21,7 @@ dependencies = [
     "pytorch-lightning>=2.5.2",
     "sentencepiece>=0.2.0",
     "tensorboardx>=2.6.2.2",
-    "transformers>=4.51.3",
+    "transformers==4.49",
+    "torch==2.4.1",
+    "donut>=0.2.2",
 ]
