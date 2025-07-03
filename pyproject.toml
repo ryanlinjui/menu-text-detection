@@ -23,5 +23,5 @@ dependencies = [
     "tensorboardx>=2.6.2.2",
     "transformers==4.49",
     "torch==2.4.1",
-    "donut>=0.2.2",
+    "donut-python>=1.0.9",
 ]

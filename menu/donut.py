@@ -5,41 +5,73 @@ Reference: https://github.com/NielsRogge/Transformers-Tutorials/blob/master/Donu
 """
 
 import re
+import json
 import random
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Optional
 
 import torch
 import numpy as np
 from PIL import Image
+from tqdm.auto import tqdm
 from nltk import edit_distance
 import pytorch_lightning as pl
 from datasets import DatasetDict
-from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
+from donut import JSONParseEvaluator
 from huggingface_hub import upload_folder
 from pillow_heif import register_heif_opener
-from pytorch_lightning.callbacks import Callback
-from transformers import pipeline, DonutProcessor
-from transformers import VisionEncoderDecoderModel
-from transformers import VisionEncoderDecoderConfig
 from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.callbacks import Callback, EarlyStopping
+from torch.utils.data import (
+    Dataset,
+    DataLoader
+)
+from transformers import (
+    pipeline,
+    DonutProcessor,
+    VisionEncoderDecoderModel,
+    VisionEncoderDecoderConfig
+)
 
 TASK_PROMPT_NAME = "<s_menu-text-detection>"
 register_heif_opener()
 
 class DonutFinetuned:
     def __init__(self, pretrained_model_repo_id: str = "ryanlinjui/donut-test"):
+        self.device = (
+            "cuda"
+            if torch.cuda.is_available()
+            else "mps" if torch.backends.mps.is_available() else "cpu"
+        )
         self.processor = DonutProcessor.from_pretrained(pretrained_model_repo_id)
         self.pipe = pipeline(
             task="image-text-to-text",
             model=pretrained_model_repo_id,
-            processor=self.processor
+            processor=self.processor,
+            device=self.device
         )
+        print(f"Using {self.device} device")
 
     def predict(self, image: np.ndarray) -> dict:
         image = Image.fromarray(image)
         outputs = self.pipe(text=TASK_PROMPT_NAME, images=image)[0]["generated_text"]
         return self.processor.token2json(outputs)
+
+    def evaluate(self, dataset: Dataset, ground_truth_key: str = "ground_truth"):
+        output_list = []
+        accs = []
+
+        for _, sample in tqdm(enumerate(dataset), total=len(dataset)):
+            outputs = self.pipe(text=TASK_PROMPT_NAME, images=sample["image"].convert("RGB"))[0]["generated_text"]
+            seq = self.processor.token2json(outputs)
+            ground_truth = sample[ground_truth_key]
+            evaluator = JSONParseEvaluator()
+            score = evaluator.cal_acc(seq, ground_truth)
+            accs.append(score)
+            output_list.append(seq)
+        
+        scores = {"accuracies": accs, "mean_accuracy": np.mean(accs)}
+        return scores, output_list
+
     
 class DonutTrainer:
     processor = None
@@ -184,23 +216,20 @@ class DonutTrainer:
             # labels[: torch.nonzero(labels == self.prompt_end_token_id).sum() + 1] = self.ignore_id  # model doesn't need to predict prompt (for VQA)
             return pixel_values, labels, target_sequence
 
+        
     class DonutModelPLModule(pl.LightningModule):
         def __init__(self, config, processor, model):
             super().__init__()
             self.config = config
             self.processor = processor
             self.model = model
-            self.validation_step_outputs = []
 
         def training_step(self, batch, batch_idx):
             pixel_values, labels, _ = batch
 
             outputs = self.model(pixel_values, labels=labels)
             loss = outputs.loss
-            
-            # Log only train_loss_step
-            self.log("train_loss_step", loss, on_step=True, on_epoch=False, prog_bar=True)
-            
+            self.log("train_loss", loss)
             return loss
 
         def validation_step(self, batch, batch_idx, dataset_idx=0):
@@ -239,30 +268,16 @@ class DonutTrainer:
                     print(f"    Answer: {answer}")
                     print(f" Normed ED: {scores[0]}")
 
-            # Return scores for epoch-level aggregation
-            output = {"edit_distances": scores}
-            self.validation_step_outputs.append(output)
-            return output
+            val_edit_distance = np.mean(scores)
+            self.log("val_edit_distance", val_edit_distance)
+            print(f"Validation Edit Distance: {val_edit_distance}")
 
-        def on_validation_epoch_end(self):
-            # Collect all edit distances from all validation steps
-            all_edit_distances = []
-            for output in self.validation_step_outputs:
-                all_edit_distances.extend(output["edit_distances"])
-            
-            # Calculate average edit distance across entire validation set
-            avg_edit_distance = np.mean(all_edit_distances)
-            print(f"Average Edit Distance: {avg_edit_distance:.4f}")
-            
-            # Log the required metrics
-            self.log("avg_val_edit_distance", avg_edit_distance, on_epoch=True, prog_bar=True)
-            
-            # Clear the list for next epoch
-            self.validation_step_outputs.clear()
+            return scores
 
         def configure_optimizers(self):
             # you could also add a learning rate scheduler if you want
             optimizer = torch.optim.Adam(self.parameters(), lr=self.config.get("lr"))
+
             return optimizer
 
         def train_dataloader(self):
@@ -310,7 +325,8 @@ class DonutTrainer:
         num_training_samples_per_epoch: int,
         num_nodes: int,
         warmup_steps: int,
-        ground_truth_key: str = "ground_truth",
+        early_stopping_patience: Optional[int] = None,
+        ground_truth_key: str = "ground_truth"
     ):
         cls.huggingface_model_id = huggingface_model_id
         config = VisionEncoderDecoderConfig.from_pretrained(pretrained_model_repo_id)
@@ -370,6 +386,11 @@ class DonutTrainer:
             else "mps" if torch.backends.mps.is_available() else "cpu"
         )
         print(f"Using {device} device")
+
+        callbacks=[cls.PushToHubCallback()]
+        if early_stopping_patience == None:
+            callbacks += [EarlyStopping(monitor="val_edit_distance", patience=early_stopping_patience, verbose=False, mode="min")]
+
         trainer = pl.Trainer(
                 accelerator="gpu" if device == "cuda" else "mps" if device == "mps" else "cpu",
                 devices=1 if device == "cuda" else 0,
@@ -380,6 +401,6 @@ class DonutTrainer:
                 precision=16 if device == "cuda" else 32, # we'll use mixed precision if device == "cuda"
                 num_sanity_val_steps=0,
                 logger=TensorBoardLogger(save_dir="./.checkpoints", name="donut_training", version=None),
-                callbacks=[cls.PushToHubCallback()]
+                callbacks=callbacks
         )
         trainer.fit(model_module)
