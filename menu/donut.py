@@ -5,13 +5,12 @@ Reference: https://github.com/NielsRogge/Transformers-Tutorials/blob/master/Donu
 """
 
 import re
-import json
 import random
-from typing import Any, List, Tuple, Optional
+from typing import Any, List, Tuple, Dict
 
+import PIL
 import torch
 import numpy as np
-from PIL import Image
 from tqdm.auto import tqdm
 from nltk import edit_distance
 import pytorch_lightning as pl
@@ -19,14 +18,13 @@ from datasets import DatasetDict
 from donut import JSONParseEvaluator
 from huggingface_hub import upload_folder
 from pillow_heif import register_heif_opener
+from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.loggers import TensorBoardLogger
-from pytorch_lightning.callbacks import Callback, EarlyStopping
 from torch.utils.data import (
     Dataset,
     DataLoader
 )
 from transformers import (
-    pipeline,
     DonutProcessor,
     VisionEncoderDecoderModel,
     VisionEncoderDecoderConfig
@@ -43,35 +41,109 @@ class DonutFinetuned:
             else "mps" if torch.backends.mps.is_available() else "cpu"
         )
         self.processor = DonutProcessor.from_pretrained(pretrained_model_repo_id)
-        self.pipe = pipeline(
-            task="image-text-to-text",
-            model=pretrained_model_repo_id,
-            processor=self.processor,
-            device=self.device
-        )
+        self.model = VisionEncoderDecoderModel.from_pretrained(pretrained_model_repo_id)
+        self.model.eval()
+        self.model.to(self.device)
         print(f"Using {self.device} device")
 
-    def predict(self, image: np.ndarray) -> dict:
-        image = Image.fromarray(image)
-        outputs = self.pipe(text=TASK_PROMPT_NAME, images=image)[0]["generated_text"]
-        return self.processor.token2json(outputs)
+    def predict(self, image: PIL.Image.Image) -> Dict[str, Any]:
+        # prepare encoder inputs
+        pixel_values = self.processor(image.convert("RGB"), return_tensors="pt").pixel_values
+        pixel_values = pixel_values.to(self.device)
+        
+        # prepare decoder inputs
+        decoder_input_ids = self.processor.tokenizer(TASK_PROMPT_NAME, add_special_tokens=False, return_tensors="pt").input_ids
+        decoder_input_ids = decoder_input_ids.to(self.device)
 
-    def evaluate(self, dataset: Dataset, ground_truth_key: str = "ground_truth"):
+        # autoregressively generate sequence
+        outputs = self.model.generate(
+                pixel_values,
+                decoder_input_ids=decoder_input_ids,
+                max_length=self.model.decoder.config.max_position_embeddings,
+                early_stopping=True,
+                pad_token_id=self.processor.tokenizer.pad_token_id,
+                eos_token_id=self.processor.tokenizer.eos_token_id,
+                use_cache=True,
+                num_beams=1,
+                bad_words_ids=[[self.processor.tokenizer.unk_token_id]],
+                return_dict_in_generate=True
+            )
+
+        # turn into JSON
+        seq = self.processor.batch_decode(outputs.sequences)[0]
+        seq = seq.replace(self.processor.tokenizer.eos_token, "").replace(self.processor.tokenizer.pad_token, "")
+        seq = re.sub(r"<.*?>", "", seq, count=1).strip()  # remove first task start token
+        seq = self.processor.token2json(seq)
+        return seq
+
+    def evaluate(self, dataset: Dataset, ground_truth_key: str = "ground_truth") -> Tuple[Dict[str, Any], List[Any]]:
         output_list = []
         accs = []
-
-        for _, sample in tqdm(enumerate(dataset), total=len(dataset)):
-            outputs = self.pipe(text=TASK_PROMPT_NAME, images=sample["image"].convert("RGB"))[0]["generated_text"]
-            seq = self.processor.token2json(outputs)
+        ted_accs = []
+        f1_accs = []
+        
+        for idx, sample in tqdm(enumerate(dataset), total=len(dataset)):
+            seq = self.predict(sample["image"])
             ground_truth = sample[ground_truth_key]
+            
+            # Original JSON accuracy
             evaluator = JSONParseEvaluator()
             score = evaluator.cal_acc(seq, ground_truth)
             accs.append(score)
             output_list.append(seq)
-        
-        scores = {"accuracies": accs, "mean_accuracy": np.mean(accs)}
-        return scores, output_list
+            
+            # TED (Tree Edit Distance) Accuracy
+            # Convert predictions and ground truth to string format for comparison
+            pred_str = str(seq) if seq else ""
+            gt_str = str(ground_truth) if ground_truth else ""
+            
+            # Calculate normalized edit distance (1 - normalized_edit_distance = accuracy)
+            if len(pred_str) == 0 and len(gt_str) == 0:
+                ted_acc = 1.0
+            elif len(pred_str) == 0 or len(gt_str) == 0:
+                ted_acc = 0.0
+            else:
+                edit_dist = edit_distance(pred_str, gt_str)
+                max_len = max(len(pred_str), len(gt_str))
+                ted_acc = 1 - (edit_dist / max_len)
+            ted_accs.append(ted_acc)
+            
+            # F1 Score Accuracy (character-level)
+            if len(pred_str) == 0 and len(gt_str) == 0:
+                f1_acc = 1.0
+            elif len(pred_str) == 0 or len(gt_str) == 0:
+                f1_acc = 0.0
+            else:
+                # Character-level precision and recall
+                pred_chars = set(pred_str)
+                gt_chars = set(gt_str)
+                
+                if len(pred_chars) == 0:
+                    precision = 0.0
+                else:
+                    precision = len(pred_chars.intersection(gt_chars)) / len(pred_chars)
+                
+                if len(gt_chars) == 0:
+                    recall = 0.0
+                else:
+                    recall = len(pred_chars.intersection(gt_chars)) / len(gt_chars)
+                
+                if precision + recall == 0:
+                    f1_acc = 0.0
+                else:
+                    f1_acc = 2 * (precision * recall) / (precision + recall)
+            f1_accs.append(f1_acc)
 
+        scores = {
+            "accuracies": accs, 
+            "mean_accuracy": np.mean(accs),
+            "ted_accuracies": ted_accs,
+            "mean_ted_accuracy": np.mean(ted_accs),
+            "f1_accuracies": f1_accs,
+            "mean_f1_accuracy": np.mean(f1_accs),
+            "length": len(accs)
+        }
+        return scores, output_list
     
 class DonutTrainer:
     processor = None
@@ -325,7 +397,6 @@ class DonutTrainer:
         num_training_samples_per_epoch: int,
         num_nodes: int,
         warmup_steps: int,
-        early_stopping_patience: Optional[int] = None,
         ground_truth_key: str = "ground_truth"
     ):
         cls.huggingface_model_id = huggingface_model_id
@@ -386,11 +457,6 @@ class DonutTrainer:
             else "mps" if torch.backends.mps.is_available() else "cpu"
         )
         print(f"Using {device} device")
-
-        callbacks=[cls.PushToHubCallback()]
-        if early_stopping_patience == None:
-            callbacks += [EarlyStopping(monitor="val_edit_distance", patience=early_stopping_patience, verbose=False, mode="min")]
-
         trainer = pl.Trainer(
                 accelerator="gpu" if device == "cuda" else "mps" if device == "mps" else "cpu",
                 devices=1 if device == "cuda" else 0,
@@ -401,6 +467,6 @@ class DonutTrainer:
                 precision=16 if device == "cuda" else 32, # we'll use mixed precision if device == "cuda"
                 num_sanity_val_steps=0,
                 logger=TensorBoardLogger(save_dir="./.checkpoints", name="donut_training", version=None),
-                callbacks=callbacks
+                callbacks=[cls.PushToHubCallback()]
         )
         trainer.fit(model_module)

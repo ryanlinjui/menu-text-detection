@@ -1,7 +1,7 @@
 import os
 import json
 
-import numpy as np
+import PIL
 import gradio as gr
 from dotenv import load_dotenv
 from pillow_heif import register_heif_opener
@@ -36,7 +36,7 @@ MODEL_LIST = [
     "o4-mini"
 ]
 
-def handle(image: np.ndarray, model: str, api_token: str) -> str:
+def handle(image: PIL.Image.Image, model: str, api_token: str) -> str:
     if image is None:
         raise gr.Error("Please upload an image first.")
     
@@ -87,7 +87,7 @@ def UserInterface() -> gr.Interface:
             with gr.Column(scale=1, min_width=500):
                 gr.Markdown("## 📷 Menu Image")
                 menu_image = gr.Image(
-                    type="numpy", 
+                    type="pil", 
                     label="Input menu image",
                     elem_classes="image-panel"
                 )
