@@ -11,9 +11,9 @@ FUNCTION_CALL = json.load(open("tools/schema_gemini.json", "r"))
 
 class GeminiAPI(LLMBase):
     @classmethod
-    def call(cls, image: np.ndarray, model: str, token: str) -> dict:
+    def call(cls, image: Image.Image, model: str, token: str) -> dict:
         client = genai.Client(api_key=token) # Initialize the client with the API key
-        encode_img = Image.fromarray(image) # Convert the image for the API
+        encode_img = image # Convert the image for the API
 
         config = types.GenerateContentConfig(
             tools=[types.Tool(function_declarations=[FUNCTION_CALL])],
