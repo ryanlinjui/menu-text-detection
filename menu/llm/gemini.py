@@ -1,19 +1,18 @@
 import json
+from typing import List
 
-import numpy as np
 from PIL import Image
 from google import genai
 from google.genai import types
 
-from .base import LLMBase
+from .base import LLMBase, PROMPT
 
 FUNCTION_CALL = json.load(open("tools/schema_gemini.json", "r"))
 
 class GeminiAPI(LLMBase):
     @classmethod
-    def call(cls, image: Image.Image, model: str, token: str) -> dict:
+    def call(cls, images: List[Image.Image], model: str, token: str) -> dict:
         client = genai.Client(api_key=token) # Initialize the client with the API key
-        encode_img = image # Convert the image for the API
 
         config = types.GenerateContentConfig(
             tools=[types.Tool(function_declarations=[FUNCTION_CALL])],
@@ -24,9 +23,10 @@ class GeminiAPI(LLMBase):
                 }
             }
         )        
+        
         response = client.models.generate_content(
             model=model,
-            contents=[encode_img],
+            contents=images + [PROMPT],
             config=config
         )
         if response.candidates[0].content.parts[0].function_call:
