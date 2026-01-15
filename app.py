@@ -43,16 +43,9 @@ LLM_MODEL_LIST = [
     "o4-mini"
 ]
 CSS_STYLE = """
-    .image-panel {
-        display: flex;
-        flex-direction: column;
-        height: 600px;
-    }
     .image-panel img {
-        object-fit: contain;
-        max-height: 550px;
-        max-width: 550px;
-        width: 100%;
+        max-height: 500px;
+        margin-top: -100px;
     }
     .large-text textarea {
         font-size: 20px !important;
@@ -138,7 +131,7 @@ def handle(images: List[str], model: str, api_token: str) -> str:
     return json.dumps(result, indent=4, ensure_ascii=False, sort_keys=True)
 
 def UserInterface() -> gr.Interface:
-    with gr.Blocks(delete_cache=(86400, 86400), css=CSS_STYLE) as gradio_interface:
+    with gr.Blocks(delete_cache=(86400, 86400)) as gradio_interface:
         gr.HTML(f'<a href="{SOURCE_CODE_GH_URL}"><img src="{BADGE_URL}" alt="GitHub Code"/></a>')
         gr.Markdown("# Menu Text Detection")
 
@@ -155,8 +148,9 @@ def UserInterface() -> gr.Interface:
                         type="filepath", 
                         elem_classes="image-panel",
                         interactive=False,
-                        show_download_button=False,
-                        show_label=True
+                        show_label=True,
+                        height="100%",
+                        width="100%"
                     )
                     with gr.Row(elem_classes="control-row"):
                         prev_btn = gr.Button("◀️ Previous", variant="secondary", scale=1)
@@ -317,4 +311,4 @@ def UserInterface() -> gr.Interface:
 
 if __name__ == "__main__":
     demo = UserInterface()
-    demo.launch()
+    demo.launch(css=CSS_STYLE)
