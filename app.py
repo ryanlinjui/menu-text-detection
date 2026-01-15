@@ -1,5 +1,6 @@
 import os
 import json
+import base64
 import requests
 from io import BytesIO
 from typing import List
@@ -99,7 +100,7 @@ def handle(images: List[str], model: str, api_token: str) -> str:
     if not images:
         raise gr.Error("Please upload an image first.")
 
-    # Convert file paths or URLs to PIL Images
+    # Convert to PIL Images
     pil_images = []
     for img in images:
         if img.startswith("http://") or img.startswith("https://"):
@@ -109,6 +110,13 @@ def handle(images: List[str], model: str, api_token: str) -> str:
                 pil_images.append(Image.open(BytesIO(response.content)))
             except Exception as e:
                 raise gr.Error(f"Failed to load image from URL: {str(e)}")
+        elif img.startswith("data:image/") and ";base64," in img:
+            try:
+                _, encoded = img.split(";base64,", 1)
+                data = base64.b64decode(encoded)
+                pil_images.append(Image.open(BytesIO(data)))
+            except Exception as e:
+                raise gr.Error(f"Failed to decode Base64 image: {str(e)}")
         else:
             pil_images.append(Image.open(img))
     
@@ -305,6 +313,11 @@ def UserInterface() -> gr.Interface:
             fn=handle,
             inputs=[images_state, model_choice_dropdown, api_token_textbox],
             outputs=menu_json_textbox
+        )
+
+        gr.api(
+            fn=handle,
+            api_name="run"
         )
 
     return gradio_interface
