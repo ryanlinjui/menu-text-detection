@@ -29,9 +29,7 @@ GITHUB_RAW_URL = "https://raw.githubusercontent.com/ryanlinjui/menu-text-detecti
 EXAMPLE_IMAGE_LIST = [
     [f"{GITHUB_RAW_URL}/examples/menu-hd.jpg"],
     [f"{GITHUB_RAW_URL}/examples/menu-vs.jpg"],
-    [f"{GITHUB_RAW_URL}/examples/menu-si.jpg"],
-    [f"{GITHUB_RAW_URL}/examples/menu-hd.jpg", f"{GITHUB_RAW_URL}/examples/menu-si.jpg"],
-    [f"{GITHUB_RAW_URL}/examples/menu-si.jpg", f"{GITHUB_RAW_URL}/examples/menu-vs.jpg", f"{GITHUB_RAW_URL}/examples/menu-hd.jpg", f"{GITHUB_RAW_URL}/examples/menu-vs.jpg"],
+    [f"{GITHUB_RAW_URL}/examples/menu-si.jpg"]
 ]
 FINETUNED_MODEL_LIST = [
     "Donut (Document Parsing Task) Fine-tuned Model"
