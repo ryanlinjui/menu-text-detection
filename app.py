@@ -36,6 +36,8 @@ FINETUNED_MODEL_LIST = [
     "Donut (Document Parsing Task) Fine-tuned Model"
 ]
 LLM_MODEL_LIST = [
+    "gemini-3-pro-preview",
+    "gemini-3-flash-preview",
     "gemini-2.5-pro",
     "gemini-2.5-flash",
     "gemini-2.0-flash",
@@ -127,7 +129,7 @@ def handle(images: List[str], model: str, api_token: str) -> str:
         if len(api_token) < 10:
             raise gr.Error(f"Please provide a valid token for {model}.")
         try:
-            if model in LLM_MODEL_LIST[:3]:
+            if model in LLM_MODEL_LIST[:5]:
                 result = GeminiAPI.call(pil_images, model, api_token)
             else:
                 result = OpenAIAPI.call(pil_images, model, api_token)
@@ -295,7 +297,7 @@ def UserInterface() -> gr.Interface:
         def update_token_visibility(choice):
             if choice in LLM_MODEL_LIST:
                 current_token = ""
-                if choice in LLM_MODEL_LIST[:3]:
+                if choice in LLM_MODEL_LIST[:5]:
                     current_token = GEMINI_API_TOKEN
                 else:
                     current_token = OPENAI_API_TOKEN
