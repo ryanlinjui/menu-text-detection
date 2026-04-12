@@ -42,8 +42,6 @@ frozenlist==1.8.0
 fsspec==2025.10.0
 google-auth==2.47.0
 google-genai==1.58.0
-gradio==6.3.0
-gradio-client==2.0.3
 groovy==0.1.2
 h11==0.16.0
 hf-xet==1.2.0
