@@ -142,7 +142,7 @@ def handle(images: List[str], model: str, api_token: str) -> str:
 
 def UserInterface() -> gr.Interface:
     with gr.Blocks(delete_cache=(86400, 86400)) as gradio_interface:
-        gr.HTML(f'<a href="{SOURCE_CODE_GH_URL}"><img src="{BADGE_URL}" alt="GitHub Code"/></a>')
+        gr.HTML(f'<a href="{SOURCE_CODE_GH_URL}" target="_blank"><img src="{BADGE_URL}" alt="GitHub Code"/></a>')
         gr.Markdown("# Menu Text Detection")
 
         images_state = gr.State([])
